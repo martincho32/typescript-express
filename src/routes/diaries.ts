@@ -1,8 +1,8 @@
-import express from 'express'
+import { Request, Response, NextFunction, Router } from 'express'
 import * as diaryService from '../services/diaryService'
-import toNewDiaryEntry from '../utils'
+import validateDiaryEntry from '../middleware/validation'
 
-const router = express.Router()
+const router = Router()
 
 router.get('/', (_req, res) => {
   res.send(diaryService.getEntriesWithoutSensitiveInfo())
@@ -15,10 +15,18 @@ router.get('/:id', (req, res) => {
     : res.sendStatus(404)
 })
 
-router.post('/', (req, res) => {
+const middleware = (req: Request, res: Response, next: NextFunction): void => {
   try {
-    const newDiaryEntry = toNewDiaryEntry(req.body)
-    const addedDiaryEntry = diaryService.addDiary(newDiaryEntry)
+    validateDiaryEntry(req.body)
+    next()
+  } catch (error: any) {
+    res.status(400).send(error.message)
+  }
+}
+
+router.post('/', middleware, (req, res) => {
+  try {
+    const addedDiaryEntry = diaryService.addDiary(req.body)
     res.send(addedDiaryEntry)
   } catch (error: any) {
     res.status(400).send(error.message)
